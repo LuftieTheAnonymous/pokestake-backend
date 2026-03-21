@@ -4,7 +4,7 @@
   "description": "A backend module for pokestake protocol responsible for game logic",
   "main": "index.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "tsx index.ts"
   },
   "keywords": [
     "pokemon",
@@ -21,6 +21,7 @@
   "license": "ISC",
   "dependencies": {
     "@types/express": "^5.0.6",
+    "@types/socket.io": "^3.0.2",
     "eiows": "^8.2.0",
     "express": "^5.2.1",
     "socket.io": "^4.8.3",
@@ -28,5 +29,8 @@
     "tsc": "^2.0.4",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0"
   }
 }
