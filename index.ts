@@ -1,51 +1,38 @@
 import express from 'express';
 import { Server } from 'socket.io';
 import { createServer } from 'http'; // Use HTTP instead of HTTPS for local dev
+import { redisClient } from './configs/RedisConfig';
+import useSocketFunction from './socket/useBattleFunctions';
 
 const app = express();
 const server = createServer(app);
 
+redisClient.on('error', err => console.log('Redis Client Error', err));
+redisClient.on('connect', () => console.log('Redis Client Connected'));
+redisClient.on('ready', () => console.log('Redis Client Ready'));
+
+
+
 const socketio = new Server(server, {
-  cors: { origin: ['http://localhost:3000'], methods:["POST", "GET", "DELETE", "UPDATE"] },
+  cors: { origin: ['http://localhost:3000', 'https://localhost:3000'], methods:["POST", "GET", "DELETE", "UPDATE"] },
   connectionStateRecovery: {
     'maxDisconnectionDuration': 1000
   }
 });
 
+
+
 socketio.on('connection', (socket) => {
-  const walletAddress = socket.handshake.auth.walletAddress;
-  
-  const isAuthenticated = walletAddress && 
-                          walletAddress.startsWith("0x") && 
-                          walletAddress.length === 42;
+  const {joinBattle, createBattleRoom, leaveBattleRoom}=useSocketFunction(socket, socketio);
 
+  socket.on('join-battle', joinBattle);
 
-  socket.on('join-room',(roomId)=>{
-   if (!isAuthenticated) {
-    socket.emit('no_auth', { msg: "No authentication" });
-    // socket.disconnect(true); // Disconnect immediately
-    return;
-  }
-    socket.join(roomId);
-    socket.emit("join-response", {message:`You have joined ${roomId}-room`});
-  });
+  socket.on('create-room', createBattleRoom);
 
-  socket.on('send-to-room', (roomId, message)=>{
-    socketio.to(roomId).emit('message_to_room', message);
-  });
-
-  socket.on("leave-room", (roomId)=>{
-    if(socket.rooms.has(roomId)){
-    socket.leave(roomId);
-    socket.emit("leave-room-msg", {message:'Bye hope to see you again :D'});
-  }else{
-socket.emit('not_member', {msg:`You are not the member of the room ${roomId}`});
-  }
-
-  });
+  socket.on("leave-room", leaveBattleRoom);
     
   socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
+    socket.emit("disconnected-msg", {message:'You have been disconnected from the server.'})
   });
 
 });

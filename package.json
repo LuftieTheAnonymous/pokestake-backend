@@ -1,6 +1,7 @@
 {
   "name": "pokestake-backend",
   "version": "1.0.0",
+  "type": "module",
   "description": "A backend module for pokestake protocol responsible for game logic",
   "main": "index.ts",
   "scripts": {
@@ -24,6 +25,7 @@
     "@types/socket.io": "^3.0.2",
     "eiows": "^8.2.0",
     "express": "^5.2.1",
+    "redis": "^5.11.0",
     "socket.io": "^4.8.3",
     "ts-node": "^10.9.2",
     "tsc": "^2.0.4",
