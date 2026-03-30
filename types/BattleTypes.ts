@@ -1,13 +1,15 @@
 export type PokemonBattler= {
   name: string;
-  level: number;
+  rarityLevel: number;
   hp: number;
+  pokemonId: number;
+  pokedexId: number;
   maxHp: number;
   attack: number;
   defense: number;
-  sprites:{front:string, back:string}
+  sprites:{front:string, back:string},
+  cries: {legacy:`https://${string}.ogg` | null | undefined, latest:`https://${string}.ogg` | null | undefined}
 }
-
 
 export type Player={
 playerNickname?:string,
@@ -16,24 +18,19 @@ pokemonDeck:PokemonBattler[]
 }
 
 export interface BattleRoom{
-    host: `0x${string}`,
+    host: `0x${string}` | null,
     creationTime:number,
-    
+    roomId: string | null,
     isBattleStarted:boolean,
     isBattleFinished:boolean,
-    
-    startTime?:number,
-    finishTime?:number,
-    
-    participantsAllowed: [`0x${string}`, `0x${string}`],
-    
-    currentTurn?: 'host' | 'invitee',
-    turnChangedAt?: number,
+    startTime:number | null,
+    finishTime:number | null,
+    participantsAllowed: [`0x${string}`, `0x${string}`] | [],
+    currentTurn: 'host' | 'invitee' | null,
+    turnChangedAt: number | null,
     turnNumber: number,
-
-    hostPlayer?: Player,
-    inviteePlayer?:Player
-
+    hostPlayer: Player | null,
+    inviteePlayer:Player | null,
     moveHistory: MoveAction[];
 }
 

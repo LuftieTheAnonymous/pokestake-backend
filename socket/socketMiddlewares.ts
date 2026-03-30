@@ -17,8 +17,8 @@ function useSocketMiddlewares(socket:Socket<DefaultEventsMap, DefaultEventsMap, 
     return;
   }
 }
-let validRoomIdMiddleware= async (roomId:number)=>{
-  if(!roomId || typeof roomId !== 'number' || roomId.toString().length !== 6){
+let validRoomIdMiddleware= async (roomId:string)=>{
+  if(!roomId || isNaN(Number(roomId)) || roomId.toString().length !== 6){
     socket.emit('invalid-battle-room', {error:'Invalid Id of the room has been provided !', data:null});
     return;
   }

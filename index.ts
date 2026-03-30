@@ -25,12 +25,20 @@ const socketio = new Server(server, {
 socketio.on('connection', (socket) => {
   const {joinBattle, createBattleRoom, leaveBattleRoom}=useSocketFunction(socket, socketio);
 
-  socket.on('join-battle', joinBattle);
+  // PRE-GAMEPLAY EVENTS
 
-  socket.on('create-room', createBattleRoom);
+  socket.on('join-battle-room', joinBattle);
 
-  socket.on("leave-room", leaveBattleRoom);
-    
+  socket.on('create-battle-room', createBattleRoom);
+
+  socket.on("leave-battle-room", leaveBattleRoom);
+  
+  // GAMEPLAY EVENTS
+  
+
+  // DISCONNECTION & RECONNECTION EVENTS
+  
+
   socket.on('disconnect', () => {
     socket.emit("disconnected-msg", {message:'You have been disconnected from the server.'})
   });
