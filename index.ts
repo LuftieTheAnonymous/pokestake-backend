@@ -2,7 +2,7 @@ import express from 'express';
 import { Server } from 'socket.io';
 import { createServer } from 'http'; // Use HTTP instead of HTTPS for local dev
 import { redisClient } from './configs/RedisConfig';
-import useSocketFunction from './socket/useBattleFunctions';
+import useBattle from './socket/useBattle';
 
 const app = express();
 const server = createServer(app);
@@ -23,9 +23,9 @@ const socketio = new Server(server, {
 
 
 socketio.on('connection', (socket) => {
-  const {joinBattle, createBattleRoom, leaveBattleRoom}=useSocketFunction(socket, socketio);
+  const {joinBattle, createBattleRoom, sendInBattleMessage, finishBattle, leaveBattleRoom, startBattle, peformAttack, swapPokemon, handleTimeout}=useBattle(socket, socketio);
 
-  // PRE-GAMEPLAY EVENTS
+  // PRE-GAMEPLAY EVENTS  
 
   socket.on('join-battle-room', joinBattle);
 
@@ -34,7 +34,17 @@ socketio.on('connection', (socket) => {
   socket.on("leave-battle-room", leaveBattleRoom);
   
   // GAMEPLAY EVENTS
+  socket.on('start-battle', startBattle);
+
+  socket.on('finish-battle', finishBattle);
+
+  socket.on('send-in-battle-message', sendInBattleMessage);
   
+  socket.on('perform-move', peformAttack);
+
+  socket.on('swap-pokemon', swapPokemon);
+
+  socket.on('handle-timeout', handleTimeout);
 
   // DISCONNECTION & RECONNECTION EVENTS
   
@@ -46,5 +56,4 @@ socketio.on('connection', (socket) => {
 });
 
 server.listen(2137, () => {
-  console.log('Server running on port 2137');
 });

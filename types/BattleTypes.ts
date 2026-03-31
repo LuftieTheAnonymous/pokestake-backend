@@ -1,3 +1,6 @@
+export const MAX_TURN_DURATION = 30_000; // 30 seconds
+export const MAX_BATTLE_DURATION_TIME= 1_800_000; // 30 minutes 
+
 export type PokemonBattler= {
   name: string;
   rarityLevel: number;
@@ -38,8 +41,14 @@ export type MoveAction = {
   turn: number;
   player: 'host' | 'invitee';
   moveType: 'attack' | 'switch'; // or whatever moves you have
-  targetPokemon?: string; // For attack
-  switchToPokemon?: string; // For switch
-  timestamp: number;
-  result?: any; // damage dealt, etc.
+  attack?:{
+    attacker: PokemonBattler;
+    dmgDealt: number;
+    targetPokemon: PokemonBattler;
+  }; // For attack
+  switch?:{
+    initialPokemon: PokemonBattler,
+    targetPokemon: PokemonBattler
+  }; // For switch
+  timestamp: number; 
 };
