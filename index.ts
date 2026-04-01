@@ -14,9 +14,10 @@ redisClient.on('ready', () => console.log('Redis Client Ready'));
 
 
 const socketio = new Server(server, {
-  cors: { origin: ['http://localhost:3000', 'https://localhost:3000'], methods:["POST", "GET", "DELETE", "UPDATE"] },
+  cors: { origin: ['*'], methods:["POST", "GET", "DELETE", "UPDATE"] },
+  'pingTimeout': 5000,
   connectionStateRecovery: {
-    'maxDisconnectionDuration': 1000
+    'maxDisconnectionDuration': 1000,
   }
 });
 
@@ -56,4 +57,5 @@ socketio.on('connection', (socket) => {
 });
 
 server.listen(2137, () => {
+  console.log('Server is running on port 2137');
 });

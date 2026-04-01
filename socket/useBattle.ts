@@ -190,11 +190,13 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
   return Math.max(1, Math.floor(base * variance));
   };
 
-    if(walletAddress === battleRoom.host){
+    if(battleRoom.hostPlayer && battleRoom.inviteePlayer){
+      const attacker = walletAddress === battleRoom.host ? battleRoom.hostPlayer!.currentPokemon : battleRoom.inviteePlayer!.currentPokemon;
+      const defender = walletAddress === battleRoom.host ? battleRoom.inviteePlayer!.currentPokemon : battleRoom.hostPlayer!.currentPokemon;
       const trng = crypto.getRandomValues(new Uint32Array(1))[0];
       const attackDodged = trng % 25 === 0;
-      const damageDealt = attackDodged ? 0 : calcDamage(battleRoom.hostPlayer!.currentPokemon, battleRoom.inviteePlayer!.currentPokemon);
-      battleRoom.inviteePlayer!.currentPokemon.hp = Math.max(0, battleRoom.inviteePlayer!.currentPokemon.hp - damageDealt);
+      const damageDealt = attackDodged ? 0 : calcDamage(attacker, defender);
+      defender.hp = Math.max(0, defender.hp - damageDealt);
 
       let playerMove:MoveAction = {moveType:'attack', player:'host', 'timestamp': new Date().getTime(), turn: battleRoom.turnNumber, attack:{
         attacker: battleRoom.hostPlayer!.currentPokemon,
@@ -209,6 +211,8 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
       socketio.to(roomId).emit('move-performed',{data:{battleRoom, damage: damageDealt, message}, error:null});
       return;
     }
+
+
   };
 
   const finishBattle = async(roomId:string)=>{
