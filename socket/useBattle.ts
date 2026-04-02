@@ -70,13 +70,13 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
       return;
     }
         
-    const battleRoomChanged: BattleRoom = socket.handshake.auth.walletAddress === battleRoom.host ? {...battleRoom, hostPlayer:null} : {...battleRoom, inviteePlayer:null};
+    socket.handshake.auth.walletAddress === battleRoom.host ? battleRoom.hostPlayer=null : battleRoom.inviteePlayer=null;
   
-    await updateBattleRoom(roomId, battleRoomChanged); 
+    await updateBattleRoom(roomId, battleRoom); 
       
-    socket.emit("left-room", {data:{message:`You left the battle-room (ID: ${roomId}) !`, battleRoom:battleRoomChanged}, error:null});
+    socket.emit("left-room", {data:{message:`You left the battle-room (ID: ${roomId}) !`, battleRoom:battleRoom}, error:null});
     socket.leave(`${roomId}`);
-    socketio.to(`${roomId}`).emit('player-left', {data: {message:`Player ${walletAddress} left the game-session.`, battleRoom:battleRoomChanged}, error:null});
+    socketio.to(`${roomId}`).emit('player-left', {data: {message:`Player ${walletAddress} left the game-session.`, battleRoom}, error:null});
 }
 
   const sendInBattleMessage = async (roomId:string, message:string)=>{
@@ -126,7 +126,7 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
       return;
     }
 
-    if(walletAddress !== battleRoom.host){
+    if(walletAddress !== battleRoom.host && battleRoom.participantsAllowed.find(address => address === walletAddress)){
       let previousPokemon = battleRoom.inviteePlayer!.currentPokemon;
       let playerMove:MoveAction = {moveType:'switch', player:'invitee', 'timestamp': new Date().getTime(), turn: battleRoom.turnNumber, switch:{
       initialPokemon:previousPokemon,
@@ -167,7 +167,7 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
 
   const calcDamage = (attacker: PokemonBattler, defender: PokemonBattler) => {
    // Base calculation: scale rarity as a multiplier (1.0x to 1.3x), not additive
-  const rarityMultiplier = 1.0 + (attacker.rarityLevel - 1) * 0.1; // 1.0, 1.1, 1.2, 1.3
+  const rarityMultiplier = 1.0 + (attacker.rarityLevel) * 0.1; // 1.0, 1.1, 1.2, 1.3
   
   // Stat ratio with a floor so low defense doesn't get one-shot
   const statRatio = Math.max(0.5, attacker.attack / defender.defense);
@@ -187,7 +187,7 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
       const attacker = walletAddress === battleRoom.host ? battleRoom.hostPlayer!.currentPokemon : battleRoom.inviteePlayer!.currentPokemon;
       const defender = walletAddress === battleRoom.host ? battleRoom.inviteePlayer!.currentPokemon : battleRoom.hostPlayer!.currentPokemon;
       const trng = crypto.getRandomValues(new Uint32Array(1))[0];
-      const attackDodged = trng % 25 === 0;
+      const attackDodged = (trng - Math.floor(defender.defense / 10)) % 25 === 0;
       const damageDealt = attackDodged ? 0 : calcDamage(attacker, defender);
       defender.hp = Math.max(0, defender.hp - damageDealt);
 
