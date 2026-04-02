@@ -15,18 +15,12 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
         
     const battleRoom = await getBattleRoom(roomId) as BattleRoom;
 
-    let redisUpdatedState:BattleRoom = !battleRoom.inviteePlayer && battleRoom.host !== walletAddress ? {
-      ...battleRoom,
-      inviteePlayer: playerDetails, 
-    } : {
-      ...battleRoom,
-      hostPlayer: playerDetails, 
-    };
-
-    await updateBattleRoom(roomId, redisUpdatedState);
+    !battleRoom.inviteePlayer ? battleRoom.inviteePlayer = playerDetails : battleRoom.hostPlayer = playerDetails;
+   
+    await updateBattleRoom(roomId, battleRoom);
 
     socket.join(`${roomId}`);
-    socket.emit("join-response", {data:{message:`You have joined the battle-room (ID: ${roomId}) !`, battleRoom:redisUpdatedState}, error:null});
+    socket.emit("join-response", {data:{message:`You have joined the battle-room (ID: ${roomId}) !`, battleRoom:battleRoom}, error:null});
     socketio.to(`${roomId}`).emit('player-joined', 
       {data:{message:`Player ${playerDetails.playerNickname ?? walletAddress} joined the game-session. Let's start the grand-battle !`,
          battleRoom:battleRoom}, error:null});
@@ -203,6 +197,15 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
         dmgDealt: damageDealt,
         targetPokemon: battleRoom.inviteePlayer!.currentPokemon,
       }};
+
+      if(!attackDodged && walletAddress === battleRoom.host) {
+        battleRoom.inviteePlayer.currentPokemon.hp = defender.hp;
+      }
+     
+      if(!attackDodged && walletAddress !== battleRoom.host) {
+        battleRoom.hostPlayer.currentPokemon.hp = defender.hp;
+      }
+      
 
       battleRoom.moveHistory.push(playerMove);
       battleRoom.currentTurn = 'invitee';

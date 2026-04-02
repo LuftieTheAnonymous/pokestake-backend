@@ -5,7 +5,7 @@
   "description": "A backend module for pokestake protocol responsible for game logic",
   "main": "index.ts",
   "scripts": {
-    "dev": "tsx index.ts"
+    "dev": "nodemon --exec tsx index.ts"
   },
   "keywords": [
     "pokemon",
@@ -27,12 +27,14 @@
     "express": "^5.2.1",
     "redis": "^5.11.0",
     "socket.io": "^4.8.3",
-    "ts-node": "^10.9.2",
     "tsc": "^2.0.4",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
   "devDependencies": {
-    "@types/node": "^25.5.0"
+    "@types/node": "^25.5.0",
+    "dotenv": "^17.4.0",
+    "nodemon": "^3.1.14",
+    "ts-node": "^10.9.2"
   }
 }

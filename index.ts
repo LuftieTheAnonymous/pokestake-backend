@@ -12,9 +12,8 @@ redisClient.on('connect', () => console.log('Redis Client Connected'));
 redisClient.on('ready', () => console.log('Redis Client Ready'));
 
 
-
 const socketio = new Server(server, {
-  cors: { origin: ['*'], methods:["POST", "GET", "DELETE", "UPDATE"] },
+  cors: { origin: ['http://localhost:3000/gameplay', 'http://localhost:3000', ], methods:["POST", "GET", "DELETE", "UPDATE"] },
   'pingTimeout': 5000,
   connectionStateRecovery: {
     'maxDisconnectionDuration': 1000,
