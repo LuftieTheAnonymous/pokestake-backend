@@ -2,7 +2,6 @@ import { DefaultEventsMap, Server, Socket } from "socket.io";
 import useSocketMiddlewares from "./socketMiddlewares";
 import { BattleRoom, MAX_TURN_DURATION, MoveAction, Player, PokemonBattler } from "../types/BattleTypes";
 import { getBattleRoom, updateBattleRoom } from "./redisHandler";
-import { error } from "node:console";
 
 export default function useBattle(socket:Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>, socketio:Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
 ){
@@ -111,7 +110,7 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
     isNotParticipant(roomId);
 
     const battleRoom = await getBattleRoom(roomId) as BattleRoom;
-    battleRoom.turnNumber++;
+
 
     if(walletAddress === battleRoom.host){
      let previousPokemon = battleRoom.hostPlayer!.currentPokemon;
@@ -122,6 +121,7 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
       battleRoom.moveHistory.push(playerMove);
       battleRoom.hostPlayer!.currentPokemon = pokemonBattler;
       battleRoom.currentTurn = 'invitee';
+      battleRoom.turnNumber++;
       socketio.to(roomId).emit('pokemon-change',{data:{battleRoom, message:`${battleRoom.hostPlayer!.playerNickname ?? battleRoom.host} has swapped ${previousPokemon.name.toUpperCase()} for ${pokemonBattler.name.toUpperCase()} !`}, error:null});
       return;
     }
@@ -164,7 +164,6 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
     isNotParticipant(roomId);
 
     const battleRoom = await getBattleRoom(roomId) as BattleRoom;
-    battleRoom.turnNumber++;
 
   const calcDamage = (attacker: PokemonBattler, defender: PokemonBattler) => {
    // Base calculation: scale rarity as a multiplier (1.0x to 1.3x), not additive
@@ -205,10 +204,14 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
       if(!attackDodged && walletAddress !== battleRoom.host) {
         battleRoom.hostPlayer.currentPokemon.hp = defender.hp;
       }
-      
+    
 
       battleRoom.moveHistory.push(playerMove);
-      battleRoom.currentTurn = 'invitee';
+      battleRoom.currentTurn = battleRoom.currentTurn === 'host' ? 'invitee' : 'host';
+      battleRoom.turnNumber++;
+
+      await updateBattleRoom(roomId, battleRoom);
+      
       let message = attackDodged ? `${battleRoom.inviteePlayer!.currentPokemon!.name} dodged the attack !` : `${battleRoom.hostPlayer!.currentPokemon!.name} attacked ${battleRoom.inviteePlayer!.currentPokemon!.name} and dealt ${damageDealt} damage !`;
 
       socketio.to(roomId).emit('move-performed',{data:{battleRoom, damage: damageDealt, message}, error:null});
@@ -226,12 +229,14 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
     
     battleRoom.isBattleFinished = true;
     battleRoom.finishTime = new Date().getTime();
-    await updateBattleRoom(roomId, battleRoom);
 
     const inviteePokemonDeckHp = battleRoom.inviteePlayer!.pokemonDeck.reduce((acc, pokemon) => {acc += pokemon.hp; return acc;},0);
     const hostPokemonDeckHp = battleRoom.hostPlayer!.pokemonDeck.reduce((acc, pokemon) => {acc += pokemon.hp; return acc;},0);
 
     const winnerAddress = inviteePokemonDeckHp === 0 ? battleRoom.host : hostPokemonDeckHp === 0 ? walletAddress : null;
+
+
+    await updateBattleRoom(roomId, battleRoom);
 
     // Place for ZKProofs for generating a proof of battle outcome.
 
