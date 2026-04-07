@@ -71,7 +71,7 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
     }
         
     socket.handshake.auth.walletAddress === battleRoom.host ? battleRoom.hostPlayer=null : battleRoom.inviteePlayer=null;
-  
+    
     await updateBattleRoom(roomId, battleRoom); 
       
     socket.emit("left-room", {data:{message:`You left the battle-room (ID: ${roomId}) !`, battleRoom:battleRoom}, error:null});
@@ -99,20 +99,23 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
     let startTimeWithCountDown = new Date().getTime() + 5000;
     battleRoom.currentTurn = generatedTRN % 2 === 0 ? 'host' : 'invitee';
     battleRoom.startTime = startTimeWithCountDown;
+    battleRoom.isBattleStarted = true;
     battleRoom.turnChangedAt = startTimeWithCountDown; 
+
+    await updateBattleRoom(roomId, battleRoom);
 
     socketio.to(roomId).emit('battle-started', {message:`Battle Started, Let's begin a battle ! ${battleRoom.currentTurn.toUpperCase()} begins !`, battleRoom})
   };
 
   const swapPokemon = async (roomId:string, pokemonBattler:PokemonBattler)=>{
     await isBattleRoomNotExisiting(roomId);
-    await battleRoomStopCasesMiddleware(roomId);
     isNotParticipant(roomId);
+    await battleRoomStopCasesMiddleware(roomId);
 
     const battleRoom = await getBattleRoom(roomId) as BattleRoom;
 
 
-    if(walletAddress === battleRoom.host){
+    if(walletAddress === battleRoom.host && battleRoom.currentTurn === 'host'){
      let previousPokemon = battleRoom.hostPlayer!.currentPokemon;
      let playerMove:MoveAction = {moveType:'switch', player:'host', 'timestamp': new Date().getTime(), turn: battleRoom.turnNumber, switch:{
       initialPokemon:previousPokemon,
@@ -122,11 +125,14 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
       battleRoom.hostPlayer!.currentPokemon = pokemonBattler;
       battleRoom.currentTurn = 'invitee';
       battleRoom.turnNumber++;
-      socketio.to(roomId).emit('pokemon-change',{data:{battleRoom, message:`${battleRoom.hostPlayer!.playerNickname ?? battleRoom.host} has swapped ${previousPokemon.name.toUpperCase()} for ${pokemonBattler.name.toUpperCase()} !`}, error:null});
+
+      await updateBattleRoom(roomId, battleRoom);
+
+      socketio.to(roomId).emit('pokemon-change',{data:{battleRoom, selectedPokemon:pokemonBattler, message:`${battleRoom.hostPlayer!.playerNickname ?? battleRoom.host} has swapped ${previousPokemon.name.toUpperCase()} for ${pokemonBattler.name.toUpperCase()} !`}, error:null});
       return;
     }
 
-    if(walletAddress !== battleRoom.host && battleRoom.participantsAllowed.find(address => address === walletAddress)){
+    if(walletAddress !== battleRoom.host && battleRoom.currentTurn === 'invitee' && battleRoom.participantsAllowed.find(address => address === walletAddress)){
       let previousPokemon = battleRoom.inviteePlayer!.currentPokemon;
       let playerMove:MoveAction = {moveType:'switch', player:'invitee', 'timestamp': new Date().getTime(), turn: battleRoom.turnNumber, switch:{
       initialPokemon:previousPokemon,
@@ -135,7 +141,11 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
       battleRoom.moveHistory.push(playerMove);
       battleRoom.inviteePlayer!.currentPokemon = pokemonBattler;
       battleRoom.currentTurn = 'host';
-      socketio.to(roomId).emit('pokemon-change',{data:{battleRoom, message:`${battleRoom.inviteePlayer!.playerNickname ?? walletAddress} has swapped ${previousPokemon.name.toUpperCase()} for ${pokemonBattler.name.toUpperCase()} !`}, error:null});
+      battleRoom.turnNumber++;
+
+      await updateBattleRoom(roomId, battleRoom);
+      
+      socketio.to(roomId).emit('pokemon-change',{data:{battleRoom, selectedPokemon:pokemonBattler, message:`${battleRoom.inviteePlayer!.playerNickname ?? walletAddress} has swapped ${previousPokemon.name.toUpperCase()} for ${pokemonBattler.name.toUpperCase()} !`}, error:null});
       return;
     }
   };
@@ -162,6 +172,7 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
   const peformAttack= async(roomId:string)=>{
     await isBattleRoomNotExisiting(roomId);
     isNotParticipant(roomId);
+    await battleRoomStopCasesMiddleware(roomId);
 
     const battleRoom = await getBattleRoom(roomId) as BattleRoom;
 
@@ -199,20 +210,25 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
 
       if(!attackDodged && walletAddress === battleRoom.host) {
         battleRoom.inviteePlayer.currentPokemon.hp = defender.hp;
+        let defenderIndex = battleRoom.inviteePlayer.pokemonDeck.findIndex((pokemon)=>pokemon.pokemonId === defender.pokemonId);
+        battleRoom.inviteePlayer.pokemonDeck[defenderIndex] = defender;
       }
      
       if(!attackDodged && walletAddress !== battleRoom.host) {
         battleRoom.hostPlayer.currentPokemon.hp = defender.hp;
+        let defenderIndex = battleRoom.hostPlayer.pokemonDeck.findIndex((pokemon)=>pokemon.pokemonId === defender.pokemonId);
+        battleRoom.hostPlayer.pokemonDeck[defenderIndex] = defender;
       }
-    
+      
+      
+
+      let message = attackDodged ? `${defender.name} dodged the attack !` : `${attacker.name} attacked ${defender.name} and dealt ${damageDealt} damage !`;
 
       battleRoom.moveHistory.push(playerMove);
       battleRoom.currentTurn = battleRoom.currentTurn === 'host' ? 'invitee' : 'host';
       battleRoom.turnNumber++;
 
       await updateBattleRoom(roomId, battleRoom);
-      
-      let message = attackDodged ? `${battleRoom.inviteePlayer!.currentPokemon!.name} dodged the attack !` : `${battleRoom.hostPlayer!.currentPokemon!.name} attacked ${battleRoom.inviteePlayer!.currentPokemon!.name} and dealt ${damageDealt} damage !`;
 
       socketio.to(roomId).emit('move-performed',{data:{battleRoom, damage: damageDealt, message}, error:null});
       return;
@@ -224,6 +240,7 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
   const finishBattle = async(roomId:string)=>{
     await isBattleRoomNotExisiting(roomId);
     await battleRoomStopCasesMiddleware(roomId);
+    
 
     const battleRoom = await getBattleRoom(roomId) as BattleRoom;
     
@@ -234,7 +251,6 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
     const hostPokemonDeckHp = battleRoom.hostPlayer!.pokemonDeck.reduce((acc, pokemon) => {acc += pokemon.hp; return acc;},0);
 
     const winnerAddress = inviteePokemonDeckHp === 0 ? battleRoom.host : hostPokemonDeckHp === 0 ? walletAddress : null;
-
 
     await updateBattleRoom(roomId, battleRoom);
 
