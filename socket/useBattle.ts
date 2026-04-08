@@ -124,6 +124,7 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
       battleRoom.moveHistory.push(playerMove);
       battleRoom.hostPlayer!.currentPokemon = pokemonBattler;
       battleRoom.currentTurn = 'invitee';
+      battleRoom.turnChangedAt = new Date().getTime();
       battleRoom.turnNumber++;
 
       await updateBattleRoom(roomId, battleRoom);
@@ -141,6 +142,7 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
       battleRoom.moveHistory.push(playerMove);
       battleRoom.inviteePlayer!.currentPokemon = pokemonBattler;
       battleRoom.currentTurn = 'host';
+      battleRoom.turnChangedAt = new Date().getTime();
       battleRoom.turnNumber++;
 
       await updateBattleRoom(roomId, battleRoom);
@@ -226,6 +228,7 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
 
       battleRoom.moveHistory.push(playerMove);
       battleRoom.currentTurn = battleRoom.currentTurn === 'host' ? 'invitee' : 'host';
+      battleRoom.turnChangedAt = new Date().getTime();
       battleRoom.turnNumber++;
 
       await updateBattleRoom(roomId, battleRoom);
@@ -251,7 +254,7 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
     const hostPokemonDeckHp = battleRoom.hostPlayer!.pokemonDeck.reduce((acc, pokemon) => {acc += pokemon.hp; return acc;},0);
 
     const winnerAddress = inviteePokemonDeckHp === 0 ? battleRoom.host : hostPokemonDeckHp === 0 ? walletAddress : null;
-
+    
     await updateBattleRoom(roomId, battleRoom);
 
     // Place for ZKProofs for generating a proof of battle outcome.
