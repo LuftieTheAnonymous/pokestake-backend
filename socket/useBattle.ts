@@ -158,6 +158,9 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
     
     const battleRoom = await getBattleRoom(roomId) as BattleRoom;
 
+     let playerMove:MoveAction = {moveType:'timeout', player:'invitee', 'timestamp': new Date().getTime(), turn: battleRoom.turnNumber};
+     battleRoom.moveHistory.push(playerMove);
+
     if(new Date().getTime() - (battleRoom.turnChangedAt as number) > MAX_TURN_DURATION){
       battleRoom.turnNumber++;
       battleRoom.currentTurn = battleRoom.currentTurn === 'host' ? 'invitee' : 'host';
@@ -243,7 +246,6 @@ const {unAuthenticatedMiddleware, validRoomIdMiddleware, walletAddress, isBattle
   const finishBattle = async(roomId:string)=>{
     await isBattleRoomNotExisiting(roomId);
     await battleRoomStopCasesMiddleware(roomId);
-    
 
     const battleRoom = await getBattleRoom(roomId) as BattleRoom;
     

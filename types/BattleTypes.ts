@@ -40,7 +40,7 @@ export interface BattleRoom{
 export type MoveAction = {
   turn: number;
   player: 'host' | 'invitee';
-  moveType: 'attack' | 'switch'; // or whatever moves you have
+  moveType: 'attack' | 'switch' | 'timeout'; // or whatever moves you have
   attack?:{
     attacker: PokemonBattler;
     dmgDealt: number;
