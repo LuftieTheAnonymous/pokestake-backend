@@ -1,0 +1,53 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Trainer {
+  walletAddress String  @unique @id
+  username String?
+  email String? @unique
+  joinedAt DateTime @default(now())
+  pokemonTeam Pokemon[]
+
+  battles Battle[] @relation(name: "BattleHost")
+
+  battles Battle[] @relation(name: "BattleWinner")
+}
+
+model Pokemon {
+  id BigInt @unique @id
+  name String
+  type String
+  attack Int
+  defense Int
+  hp Int
+  expLevel Int
+  sprites String[]
+  trainerId String
+  tokenURI String @unique
+  trainer Trainer @relation(fields: [trainerId], references: [walletAddress])
+}
+
+model Battle {
+  id BigInt @unique @id
+  inviteeId String
+  hostId String
+  winnerId String?
+  battleDate DateTime @default(now())
+  battleStartTime DateTime
+  battleEndTime DateTime
+  host Trainer @relation(name:"BattleHost", fields: [hostId], references: [walletAddress])
+  invitee Trainer @relation(name:"BattleInvitee", fields: [inviteeId], references: [walletAddress])
+  winner Trainer? @relation(name:"BattleWinner", fields: [winnerId], references: [walletAddress])
+}
+
